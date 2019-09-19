@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Invalidate
+
+Resources:
+ InvalidateFunction:
+  Type: AWS::Serverless::Function
+  Properties:
+   FunctionName: invalidate
+   Role: !GetAtt LambdaRole.Arn
+   CodeUri: .
+   Handler: invalidate
+   Runtime: go1.x
+
+ LambdaRole:
+  Type: AWS::IAM::Role
+  Properties:
+   AssumeRolePolicyDocument:
+    Statement:
+     - Effect: Allow
+       Principal:
+        Service: [lambda.amazonaws.com]
+       Action: ['sts:AssumeRole']
+   ManagedPolicyArns:
+    - arn:aws:iam::aws:policy/AWSLambdaExecute
+    - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
