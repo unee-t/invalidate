@@ -11,15 +11,19 @@ Resources:
    Handler: invalidate
    Timeout: 10
    Runtime: go1.x
-  Policies:
-   - Version: '2012-10-17'
-     Statement:
-      - Effect: 'Allow'
-        Action:
-         - codepipeline:PutJobSuccessResult
-         - codepipeline:PutJobFailureResult
-        Resource: '*'
-      - Effect: 'Allow'
-        Action:
-         - cloudfront:CreateInvalidation
-        Resource: "*"
+   Tracing: Active
+   Policies:
+    - AWSXrayWriteOnlyAccess
+    - AWSLambdaExecute
+    - AWSLambdaBasicExecutionRole
+    - Version: '2012-10-17'
+      Statement:
+       - Effect: 'Allow'
+         Action:
+          - codepipeline:PutJobSuccessResult
+          - codepipeline:PutJobFailureResult
+         Resource: '*'
+       - Effect: 'Allow'
+         Action:
+          - cloudfront:CreateInvalidation
+         Resource: "*"

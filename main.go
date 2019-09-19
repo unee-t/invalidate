@@ -33,7 +33,6 @@ func handler(ctx context.Context, evt events.CodePipelineEvent) error {
 		},
 	})
 	_, err = req.Send(context.TODO())
-	log.Println("here")
 	if err != nil {
 		return err
 	}
