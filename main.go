@@ -13,6 +13,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 )
 
+func main() { lambda.Start(handler) }
+
+// Go version of
 // https://github.com/made2591/immutable.templates/blob/master/templates/static-website/lib/invalidation-lambda/index.js
 func handler(ctx context.Context, evt events.CodePipelineEvent) error {
 	jobID := evt.CodePipelineJob.ID
@@ -22,10 +25,9 @@ func handler(ctx context.Context, evt events.CodePipelineEvent) error {
 	if err != nil {
 		return err
 	}
-	cf := cloudfront.New(cfg)
-	cp := codepipeline.New(cfg)
 
-	cfreq := cf.CreateInvalidationRequest(&cloudfront.CreateInvalidationInput{
+	// Invalidate the CloudFront CDN cache based on the arg of "user parameters"
+	_, err = cloudfront.New(cfg).CreateInvalidationRequest(&cloudfront.CreateInvalidationInput{
 		DistributionId: aws.String(distributionID),
 		InvalidationBatch: &cloudfront.InvalidationBatch{
 			CallerReference: aws.String(time.Now().String()),
@@ -34,30 +36,21 @@ func handler(ctx context.Context, evt events.CodePipelineEvent) error {
 				Items:    []string{"/*"},
 			},
 		},
-	})
-	_, err = cfreq.Send(context.TODO())
+	}).Send(context.TODO())
+
+	// We need to report the outcome via codepipeline
 	if err != nil {
 		log.Println(err)
-		cpreq := cp.PutJobFailureResultRequest(&codepipeline.PutJobFailureResultInput{
-			FailureDetails: &codepipeline.FailureDetails{
-				Message: aws.String(err.Error()),
-			},
-			JobId: aws.String(jobID),
-		})
-		_, err = cpreq.Send(context.TODO())
+		_, err = codepipeline.New(cfg).PutJobFailureResultRequest(&codepipeline.PutJobFailureResultInput{
+			FailureDetails: &codepipeline.FailureDetails{Message: aws.String(err.Error())},
+			JobId:          aws.String(jobID),
+		}).Send(context.TODO())
 	} else {
 		log.Println(distributionID, "invalidated")
-		cpreq := cp.PutJobSuccessResultRequest(&codepipeline.PutJobSuccessResultInput{
+		_, err = codepipeline.New(cfg).PutJobSuccessResultRequest(&codepipeline.PutJobSuccessResultInput{
 			JobId: aws.String(jobID),
-		})
-		_, err = cpreq.Send(context.TODO())
+		}).Send(context.TODO())
 	}
-	if err != nil {
-		log.Println(err)
-	}
-	return err
-}
 
-func main() {
-	lambda.Start(handler)
+	return err
 }
