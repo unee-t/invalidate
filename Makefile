@@ -7,12 +7,19 @@ DEPLOY_S3_PREFIX = invalidate
 
 deps:
 	go get -u .
+	go mod tidy
+
+test: build
+	sam local invoke -e codepipeline-event.json
 
 clean:
 	rm -rf invalidate
 
 build:
 	GOOS=linux GOARCH=amd64 go build
+
+logs:
+	AWS_PROFILE=uneet-dev sam logs -n invalidate -s yesterday
 
 tail:
 	AWS_PROFILE=uneet-dev sam logs -n invalidate -t
