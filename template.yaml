@@ -9,7 +9,7 @@ Resources:
    FunctionName: invalidate
    CodeUri: .
    Handler: invalidate
-   Timeout: 10
+   Timeout: 20
    Runtime: go1.x
    Tracing: Active
    Policies:

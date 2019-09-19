@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
+	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 )
 
 // https://github.com/made2591/immutable.templates/blob/master/templates/static-website/lib/invalidation-lambda/index.js
@@ -22,7 +23,9 @@ func handler(ctx context.Context, evt events.CodePipelineEvent) error {
 		return err
 	}
 	cf := cloudfront.New(cfg)
-	req := cf.CreateInvalidationRequest(&cloudfront.CreateInvalidationInput{
+	cp := codepipeline.New(cfg)
+
+	cfreq := cf.CreateInvalidationRequest(&cloudfront.CreateInvalidationInput{
 		DistributionId: aws.String(distributionID),
 		InvalidationBatch: &cloudfront.InvalidationBatch{
 			CallerReference: aws.String(time.Now().String()),
@@ -32,12 +35,27 @@ func handler(ctx context.Context, evt events.CodePipelineEvent) error {
 			},
 		},
 	})
-	_, err = req.Send(context.TODO())
+	_, err = cfreq.Send(context.TODO())
 	if err != nil {
-		return err
+		log.Println(err)
+		cpreq := cp.PutJobFailureResultRequest(&codepipeline.PutJobFailureResultInput{
+			FailureDetails: &codepipeline.FailureDetails{
+				Message: aws.String(err.Error()),
+			},
+			JobId: aws.String(jobID),
+		})
+		_, err = cpreq.Send(context.TODO())
+	} else {
+		log.Println(distributionID, "invalidated")
+		cpreq := cp.PutJobSuccessResultRequest(&codepipeline.PutJobSuccessResultInput{
+			JobId: aws.String(jobID),
+		})
+		_, err = cpreq.Send(context.TODO())
 	}
-	log.Println(distributionID, "invalidated")
-	return nil
+	if err != nil {
+		log.Println(err)
+	}
+	return err
 }
 
 func main() {
